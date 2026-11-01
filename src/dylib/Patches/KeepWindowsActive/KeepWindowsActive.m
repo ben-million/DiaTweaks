@@ -3,8 +3,7 @@
 
 extern DPPatch DPKeepWindowsActive;
 
-// AppKit asks a window's _hasActiveAppearance to pick its shadow and materials. Dia's window buttons ask
-// something else, so they still turn grey.
+// AppKit asks a window's _hasActiveAppearance to pick its shadow and materials.
 #define DPHasActiveAppearance @selector(_hasActiveAppearance)
 
 static BOOL DPIsBrowserWindow(NSWindow *window) {
@@ -13,6 +12,12 @@ static BOOL DPIsBrowserWindow(NSWindow *window) {
 
 static BOOL DPWindow_hasActiveAppearance(NSWindow *self, SEL _cmd) {
     return (DPKeepWindowsActive.on && DPIsBrowserWindow(self)) || DPCallOriginal(DPWindow_hasActiveAppearance, self);
+}
+
+// DEBUG: Dia's window buttons follow hasKeyAppearance, so every window claims it. Focus rings and other key-only
+// looks may then show in background windows too.
+static BOOL DPWindow_hasKeyAppearance(NSWindow *self, SEL _cmd) {
+    return (DPKeepWindowsActive.on && DPIsBrowserWindow(self)) || DPCallOriginal(DPWindow_hasKeyAppearance, self);
 }
 
 // Each view and the shadow only look again when focus changes, so tell them it did.
@@ -45,6 +50,7 @@ static NSString *DPVerifyKeepWindowsActive(DPPatch *patch) {
 
 static void DPInstallKeepWindowsActive(void) {
     DPHookClass(NSWindow.class, DPHasActiveAppearance, (IMP)DPWindow_hasActiveAppearance);
+    DPHookClass(NSWindow.class, @selector(hasKeyAppearance), (IMP)DPWindow_hasKeyAppearance);
 }
 
 DP_PATCH(DPKeepWindowsActive) {
