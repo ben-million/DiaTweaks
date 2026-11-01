@@ -2,14 +2,59 @@
 #import "Updates/Updates.h"
 #include <dlfcn.h>
 
+static NSString *DPDescribeColor(CGColorRef color) {
+    NSColor *rgb = [[NSColor colorWithCGColor:color] colorUsingColorSpace:NSColorSpace.sRGBColorSpace];
+    return rgb ? [NSString stringWithFormat:@"%.2f,%.2f,%.2f,%.2f", rgb.redComponent, rgb.greenComponent, rgb.blueComponent, rgb.alphaComponent] : @"?";
+}
+
+// What a layer draws around and behind its content: shadow, border, stroke and gradient.
+static void DPDescribeShadow(CALayer *layer, NSMutableString *out) {
+    if (layer.shadowOpacity > 0)
+        [out appendFormat:@" shadow=%g/%g%@", layer.shadowOpacity, layer.shadowRadius, NSStringFromSize(layer.shadowOffset)];
+    if (layer.borderWidth > 0) [out appendFormat:@" border=%g(%@)", layer.borderWidth, DPDescribeColor(layer.borderColor)];
+    if (layer.mask) [out appendFormat:@" mask=%@", NSStringFromClass(layer.mask.class)];
+    if ([layer.mask isKindOfClass:CAShapeLayer.class]) {
+        CAShapeLayer *mask = (CAShapeLayer *)layer.mask;
+        [out appendFormat:@"(line=%g fill=%@)", mask.lineWidth, mask.fillColor ? DPDescribeColor(mask.fillColor) : @"none"];
+    }
+    if (layer.opacity < 1) [out appendFormat:@" opacity=%g", layer.opacity];
+    if ([layer isKindOfClass:CAShapeLayer.class]) {
+        CAShapeLayer *shape = (CAShapeLayer *)layer;
+        if (shape.strokeColor && shape.lineWidth > 0) [out appendFormat:@" stroke=%g(%@)", shape.lineWidth, DPDescribeColor(shape.strokeColor)];
+        if (shape.fillColor) [out appendFormat:@" fill=(%@)", DPDescribeColor(shape.fillColor)];
+    }
+    if ([layer isKindOfClass:CAGradientLayer.class]) {
+        NSMutableArray *colors = [NSMutableArray new];
+        for (id color in ((CAGradientLayer *)layer).colors) [colors addObject:DPDescribeColor((__bridge CGColorRef)color)];
+        if (colors.count) [out appendFormat:@" gradient=[%@]", [colors componentsJoinedByString:@" "]];
+    }
+}
+
+// Layers no view owns, such as a selection's shadow, which the views alone wouldn't show.
+static void DPDescribeLayers(CALayer *layer, NSSet *viewLayers, NSUInteger depth, NSMutableString *out) {
+    for (CALayer *sub in layer.sublayers) {
+        if ([viewLayers containsObject:sub]) continue;
+        [out appendFormat:@"%*s(layer) %@ %@", (int)depth * 2, "", NSStringFromClass(sub.class), NSStringFromRect(sub.frame)];
+        if (sub.cornerRadius > 0) [out appendFormat:@" radius=%g", sub.cornerRadius];
+        DPDescribeShadow(sub, out);
+        if (sub.hidden) [out appendString:@" hidden"];
+        [out appendString:@"\n"];
+        DPDescribeLayers(sub, viewLayers, depth + 1, out);
+    }
+}
+
 static void DPDescribe(NSView *view, NSUInteger depth, NSMutableString *out) {
     NSString *label = view.accessibilityLabel;
     [out appendFormat:@"%*s%@ %@", (int)depth * 2, "", NSStringFromClass(view.class), NSStringFromRect(view.frame)];
     if (label.length) [out appendFormat:@" label=\"%@\"", label];
     if (view.layer.cornerRadius > 0)
         [out appendFormat:@" radius=%g corners=%lu", view.layer.cornerRadius, (unsigned long)view.layer.maskedCorners];
+    DPDescribeShadow(view.layer, out);
     if (view.hidden) [out appendString:@" hidden"];
     [out appendString:@"\n"];
+    NSMutableSet *viewLayers = [NSMutableSet set];
+    for (NSView *sub in view.subviews) if (sub.layer) [viewLayers addObject:sub.layer];
+    if (view.layer) DPDescribeLayers(view.layer, viewLayers, depth + 1, out);
     for (NSView *sub in view.subviews) DPDescribe(sub, depth + 1, out);
 }
 
