@@ -1,7 +1,7 @@
 #import "HideTabShadow.h"
 
 static char DPColorsKey;
-static const CGFloat DPSubtleness = 0.2;  // Of Dia's strongest border color's alpha.
+static const CGFloat DPSubtleness = 0.3;  // Of Dia's strongest border color's alpha.
 
 // The border is a gradient behind the tab, masked to a 1pt outline, that fades from the ends to nothing in the middle.
 static NSArray<CAGradientLayer *> *DPBorderGradients(NSView *shape) {
