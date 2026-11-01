@@ -1,7 +1,7 @@
-// Shared by the selected tab's shadow and its border, which only goes once the shadow has.
+// Shared by the selected tab's shadow and its border, which only changes once the shadow has gone.
 #import "StdPatch/StdPatch.h"
 
-extern DPPatch DPHideTabShadow, DPHideTabBorder;
+extern DPPatch DPHideTabShadow, DPSubtleTabBorder;
 extern NSHashTable<NSView *> *DPTabShapes;  // Every selected-tab shape Dia showed.
 
 NSArray *DPOwnLayers(NSView *view, Class cls);  // Sublayers of that class that no subview owns.
