@@ -11,6 +11,7 @@
 #define DPDiaContentPane        "_TtC11ContentPane15ContentPaneView"
 #define DPDiaContentContainer   "_TtC6Window20ContentContainerView"
 #define DPDiaShadowView         "_TtC5ARCUI10ShadowView"
+#define DPDiaTabShape           "_TtC5TabUIP33_903BE4B7F5DFD8B21A7A465D1A9EF8E412TabShapeView"
 #define DPDiaBrowser            "ArcBrowser"
 #define DPDiaBrowserDelegate    "_TtC3ADK15ChromiumBrowser"
 #define DPDiaTabGroupProperties "ArcTabGroupProperties"
